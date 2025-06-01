@@ -1,0 +1,37 @@
+app:
+  name: "AI Assistant Platform"
+  version: "1.0.0"
+  debug: true
+  environment: "development"
+
+auth:
+  openai_api_key: null  # Will be filled by the environment variable
+
+models:
+  local_model:
+    path: "models/my_local_model.pkl"
+    type: "sklearn"
+    enabled: true
+
+  huggingface_model:
+    repo_id: "distilbert-base-uncased"
+    task: "text-classification"
+    tokenizer: "distilbert-base-uncased"
+    enabled: true
+
+  openai_model:
+    model_name: "gpt-3.5-turbo"
+    temperature: 0.7
+    max_tokens: 512
+    enabled: true
+
+inference:
+  timeout_seconds: 20
+  retries: 2
+  batch_size: 16
+  confidence_threshold: 0.75
+
+paths:
+  logs_dir: "logs/"
+  output_dir: "outputs/"
+  embeddings_path: "models/embeddings.json"
