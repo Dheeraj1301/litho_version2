@@ -1,9 +1,22 @@
-from fastapi import APIRouter, Query
-from api.services.inference_service import run_inference
+from fastapi import APIRouter, UploadFile, File
+import pandas as pd
+import io
 
 router = APIRouter()
 
-@router.get("/")
-def infer(mask_id: str = Query(...), model: str = Query(default="gated_cnn")):
-    result = run_inference(mask_id=mask_id, model=model)
-    return {"inference_result": result}
+@router.post("/run")
+async def run_inference(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
+
+        print("✅ CSV uploaded:")
+        print(df.head())  # Log for debugging
+
+        # Dummy inference logic
+        result = {"message": "Inference completed", "rows_received": len(df)}
+
+        return result
+
+    except Exception as e:
+        return {"error": str(e)}

@@ -3,14 +3,12 @@ import UploadCSV from './components/UploadCSV';
 import InferenceForm from './components/InferenceForm';
 
 function App() {
-  const [serverStatus, setServerStatus] = useState("⏳ Checking...");
+  const [serverStatus, setServerStatus] = useState("⏳ Checking server...");
 
   useEffect(() => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
-    fetch(`${backendUrl}/health/ping`)
-      .then(res => res.json())
-      .then(data => {
+    fetch("http://127.0.0.1:8000/health/ping")
+      .then((res) => res.json())
+      .then((data) => {
         if (data.status === "ok") {
           setServerStatus("✅ Server is up");
         } else {
@@ -23,11 +21,13 @@ function App() {
   }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Computational Lithography AI</h1>
-      <div className="mb-4">{serverStatus}</div>
-      <UploadCSV />
-      <InferenceForm />
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow-md">
+        <h1 className="text-3xl font-bold mb-2 text-blue-700">🧠 Computational Lithography AI</h1>
+        <p className="mb-4 text-sm text-gray-600">{serverStatus}</p>
+        <UploadCSV />
+        <InferenceForm />
+      </div>
     </div>
   );
 }

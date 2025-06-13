@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-@router.get("/Ping")
-def health_check():
+@router.get("/ping")
+def ping():
     return {"status": "ok"}
+
