@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import health, upload, inference  # ✅ Must import these
+from api.routes import health, upload, inference, autoencoder  # ✅ Added autoencoder
 
 app = FastAPI(title="Computational Lithography AI")
 
@@ -16,6 +16,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/health", tags=["Health"])
 app.include_router(upload.router, prefix="/upload", tags=["Upload"])
 app.include_router(inference.router, prefix="/inference", tags=["Inference"])
+app.include_router(autoencoder.router, prefix="/autoencoder", tags=["AutoEncoder"])  # ✅ New route
 
 @app.get("/")
 def root():

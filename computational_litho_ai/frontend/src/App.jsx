@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import UploadCSV from './components/UploadCSV';
 import InferenceForm from './components/InferenceForm';
+import ImageInference from './components/ImageInference';
+import AutoEncoderInfer from './components/AutoEncoderInfer';  // import this
+
 
 function App() {
   const [serverStatus, setServerStatus] = useState("⏳ Checking server...");
@@ -27,6 +30,8 @@ function App() {
         <p className="mb-4 text-sm text-gray-600">{serverStatus}</p>
         <UploadCSV />
         <InferenceForm />
+        <ImageInference /> 
+        <AutoEncoderInfer />
       </div>
     </div>
   );
