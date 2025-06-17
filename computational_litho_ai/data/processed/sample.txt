@@ -1,0 +1,64 @@
+🔬 Lithography in Semiconductor Manufacturing
+Definition:
+Lithography is a microfabrication process used to transfer patterns onto a substrate (usually a silicon wafer). It's a key step in building integrated circuits (ICs).
+
+Purpose:
+To pattern the surface of a wafer with micro/nanoscale features using light or other radiation.
+
+📸 Photomasking (Photomask)
+Definition:
+A photomask is a glass or quartz plate with opaque patterns on it. It acts as a stencil that defines the desired micro-pattern to be transferred to the wafer.
+
+Function:
+Used during photolithography to block or allow light to hit specific areas of the photoresist-coated wafer.
+
+🛠️ Photolithography Process Overview
+Wafer Cleaning: Remove contaminants to ensure adhesion.
+
+Photoresist Application: A light-sensitive material is spin-coated on the wafer.
+
+Soft Bake: Dries and hardens the photoresist.
+
+Alignment and Exposure:
+
+The wafer is aligned with the photomask.
+
+UV light shines through the mask, exposing the photoresist.
+
+Development: Removes the exposed (or unexposed) parts of the photoresist.
+
+Etching: Transfers the pattern to the underlying material.
+
+Resist Strip: Removes remaining photoresist.
+
+🧪 Types of Lithography
+Type	Radiation Used	Feature Size	Common Use
+Photolithography	Ultraviolet (UV)	~7 nm (EUV)	IC fabrication
+Electron-beam (E-beam)	Electron beam	<10 nm	Mask making, research
+Extreme UV (EUV)	EUV (13.5 nm)	<7 nm	Advanced nodes (e.g., 5nm, 3nm)
+X-ray Lithography	X-rays	<20 nm	Research
+
+🧠 Key Concepts
+Resolution: Minimum feature size that can be reliably printed.
+
+Depth of Focus (DOF): Range over which the image remains sharp.
+
+Mask Alignment: Critical for overlay accuracy across multiple layers.
+
+🧭 Applications of Lithography
+Microprocessor and memory chip manufacturing
+
+MEMS devices (Micro-Electro-Mechanical Systems)
+
+Photonic circuits
+
+Display panels (OLED, LCD)
+
+🧩 Quick Terms to Know
+Positive Photoresist: Exposed areas become soluble.
+
+Negative Photoresist: Exposed areas remain insoluble.
+
+Step-and-Repeat: Technique using a stepper to expose one die at a time.
+
+Mask Blanks: Unpatterned plates used to fabricate photomasks.

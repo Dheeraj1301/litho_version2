@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import UploadCSV from './components/UploadCSV';
 import InferenceForm from './components/InferenceForm';
 import ImageInference from './components/ImageInference';
-import AutoEncoderInfer from './components/AutoEncoderInfer';  // import this
-
+import AutoEncoderInfer from './components/AutoEncoderInfer';
+import ChatAssistant from './components/ChatAssistant'; // ✅ Import Chat Assistant
 
 function App() {
   const [serverStatus, setServerStatus] = useState("⏳ Checking server...");
@@ -28,10 +28,17 @@ function App() {
       <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow-md">
         <h1 className="text-3xl font-bold mb-2 text-blue-700">🧠 Computational Lithography AI</h1>
         <p className="mb-4 text-sm text-gray-600">{serverStatus}</p>
+        
+        {/* Main features */}
         <UploadCSV />
         <InferenceForm />
-        <ImageInference /> 
+        <ImageInference />
         <AutoEncoderInfer />
+
+        {/* ✅ Chat Assistant Section */}
+        <div className="mt-10">
+          <ChatAssistant />
+        </div>
       </div>
     </div>
   );
