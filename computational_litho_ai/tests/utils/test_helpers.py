@@ -1,4 +1,4 @@
-from backend.utils.helpers import normalize  # Replace with your helper function
+from utils.helpers import normalize
 
 def test_normalize():
     data = [10, 20, 30]
