@@ -1,6 +1,12 @@
 import pytest
+import importlib
+
+httpx = importlib.util.find_spec("httpx")
+if httpx is None:
+    pytest.skip("httpx is required for API tests", allow_module_level=True)
+
 from fastapi.testclient import TestClient
-from backend.main import app  # Adjust if your app is in a different location
+from api.main import app
 
 @pytest.fixture(scope="module")
 def client():

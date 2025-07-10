@@ -24,10 +24,10 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow-md">
-        <h1 className="text-3xl font-bold mb-2 text-blue-700">🧠 Computational Lithography AI</h1>
-        <p className="mb-4 text-sm text-gray-600">{serverStatus}</p>
+    <div className="p-8">
+      <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+        <h1 className="text-4xl font-extrabold mb-2 text-blue-700 text-center">🧠 Computational Lithography AI</h1>
+        <p className="mb-6 text-sm text-gray-600 text-center">{serverStatus}</p>
         
         {/* Main features */}
         <UploadCSV />

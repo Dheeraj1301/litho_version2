@@ -1,13 +1,12 @@
 import torch
 import numpy as np
-import joblib
 from ml.yield_prediction.yield_predictor import YieldPredictor
-from ml.gated_cnn.gated_cnn import GatedCNN, predict_layout_class
-from ml.autoencoder.autoencoder import AutoEncoder
+from ml.gated_cnn.gated_cnn_model import GatedCNN, predict_layout_class
+from ml.autoencoder.train_autoencoder import AutoEncoder
 
 def test_yield_predictor():
     model = YieldPredictor()
-    model.load_model("models/yield_predictor.joblib")
+    model.load_model("ml/scripts/models/yield_predictor.joblib")
 
     # Create dummy tabular input (2 features)
     X_test = np.array([[10.0, 5.0]])
@@ -19,7 +18,7 @@ def test_yield_predictor():
 
 def test_gated_cnn():
     model = GatedCNN()
-    model.load_state_dict(torch.load("models/gated_cnn.pt"))
+    model.load_state_dict(torch.load("ml/scripts/models/gated_cnn.pt"))
     model.eval()
 
     # Dummy image input (batch size 1, 1 channel, 64x64)
@@ -32,7 +31,7 @@ def test_gated_cnn():
 
 def test_autoencoder():
     model = AutoEncoder()
-    model.load_state_dict(torch.load("models/autoencoder.pt"))
+    model.load_state_dict(torch.load("ml/scripts/models/autoencoder.pt"))
     model.eval()
 
     # Dummy image input (batch size 1, 1 channel, 64x64)

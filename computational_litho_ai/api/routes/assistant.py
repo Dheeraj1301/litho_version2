@@ -4,6 +4,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel
 import os
 import numpy as np
+import logging
 
 from langchain.chains import RetrievalQA
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -13,6 +14,15 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEndpoint
 
 router = APIRouter()
+
+# Basic file logger for assistant interactions
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
+    handler = logging.FileHandler("assistant.log")
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 class Query(BaseModel):
     query: str
@@ -54,6 +64,7 @@ async def ask_from_doc(query: Query):
     
     qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
     response = qa.run(query.query)
+    logger.info("DOC_QUERY: %s | RESPONSE: %s", query.query, response)
     return {"response": response}
 
 # ✅ Upload and process PDF
@@ -69,6 +80,7 @@ async def upload_pdf(file: UploadFile = File(...)):
 
     vectorstore = load_vector_store_from_pdf(file_path)
     retriever = vectorstore.as_retriever()
+    logger.info("PDF_UPLOADED: %s", file.filename)
     return {"message": f"Uploaded and processed {file.filename} successfully."}
 
 # ✅ Tool-based simple QA
@@ -80,14 +92,16 @@ async def ask_tool(query: Query):
     }
     for keyword, answer in tools_qa.items():
         if keyword in query.query.lower():
+            logger.info("TOOL_QUERY: %s | RESPONSE: %s", query.query, answer)
             return {"response": answer}
+    logger.info("TOOL_QUERY: %s | RESPONSE: %s", query.query, "no answer")
     return {"response": "Sorry, I don’t have an answer using tools right now."}
 
 # ✅ Analyze tensor.txt from a session
 @router.post("/analyze_tensor")
 async def analyze_tensor(request: TensorRequest):
     session_id = request.session_id
-    tensor_path = f"/ml/logs/{session_id}/tensor.txt"
+    tensor_path = os.path.join("ml", "logs", session_id, "tensor.txt")
 
     if not os.path.exists(tensor_path):
         raise HTTPException(status_code=404, detail=f"tensor.txt not found in {session_id}.")
@@ -95,8 +109,10 @@ async def analyze_tensor(request: TensorRequest):
     try:
         with open(tensor_path, "r") as f:
             lines = f.readlines()
-            data = [float(x.strip()) for x in lines if x.strip()]
-            tensor = np.array(data)
+            values = []
+            for line in lines:
+                values.extend([float(v) for v in line.split() if v])
+            tensor = np.array(values)
 
         result = {
             "shape": tensor.shape,
@@ -106,6 +122,7 @@ async def analyze_tensor(request: TensorRequest):
             "max": float(np.max(tensor)),
         }
 
+        logger.info("TENSOR_ANALYSIS: %s | shape=%s", session_id, result["shape"])
         return {"session_id": session_id, "analysis": result}
 
     except Exception as e:
@@ -114,7 +131,7 @@ async def analyze_tensor(request: TensorRequest):
 # ✅ List available session folders under .ml/logs/
 @router.get("/sessions")
 async def list_sessions():
-    logs_path = "./.ml/logs"
+    logs_path = os.path.join("ml", "logs")
     try:
         sessions = [name for name in os.listdir(logs_path)
                     if os.path.isdir(os.path.join(logs_path, name))]
