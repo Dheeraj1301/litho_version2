@@ -1,0 +1,1 @@
+See the top-level README for an overview of the project structure and features. This subpackage contains the Python source code for the backend API, machine-learning models and utilities used by the Computational Lithography AI prototype.
