@@ -6,3 +6,8 @@ router = APIRouter()
 def ping():
     return {"status": "ok"}
 
+@router.get("")
+def read_root():
+    """Simple health check endpoint."""
+    return {"status": "ok"}
+
