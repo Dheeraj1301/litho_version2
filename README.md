@@ -5,9 +5,9 @@ This repository contains a prototype platform for running machine-learning exper
 ## Project layout
 
 ```
-backend/                   Entrypoint for the FastAPI app
 computational_litho_ai/    Main Python package with API routes, ML code and utilities
 └── api/                   FastAPI routes and service logic
+└── backend/               Compatibility entrypoint for `uvicorn backend.main:app`
 └── agents/                Example LangChain tools and QA scripts
 └── frontend/              Vite/React interface
 └── ml/                    Simple PyTorch and scikit‑learn models
@@ -26,15 +26,17 @@ httpx/, multipart/, pandas/ Minimal stubs used for testing without real dependen
 ## Getting started
 
 1. Install the required dependencies (FastAPI, PyTorch, scikit‑learn, etc.).
-2. Launch the backend:
+2. Launch the backend from inside the `computational_litho_ai` directory:
    ```bash
+   cd computational_litho_ai
    uvicorn backend.main:app --reload
    ```
-3. Start the frontend development server inside `computational_litho_ai/frontend`:
+3. Start the frontend development server from the `computational_litho_ai` directory:
    ```bash
    npm install
    npm run dev
    ```
+   The root `dev` script performs a clean frontend install with `npm ci` before delegating to the Vite app in `computational_litho_ai/frontend`, which helps repair incomplete `node_modules` folders.
 4. Run the tests (requires all optional dependencies):
    ```bash
    pytest
