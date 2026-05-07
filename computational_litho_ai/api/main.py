@@ -1,24 +1,36 @@
+from importlib import import_module
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 # Import all routes
 from .routes import health
 
-# Optional imports for heavier routes. These may require third-party
-# libraries that aren't always installed in lightweight test
-# environments. Wrap them in a try/except block so the application can
-# still start without them.
-try:
-    from .routes import upload, inference, autoencoder, assistant
-except Exception:  # pragma: no cover - optional dependencies may be missing
-    upload = inference = autoencoder = assistant = None
+logger = logging.getLogger(__name__)
+
+
+def optional_route(module_name: str):
+    """Import an optional route module without disabling unrelated routes."""
+    try:
+        return import_module(f".routes.{module_name}", package=__package__)
+    except Exception as exc:  # pragma: no cover - optional dependencies may be missing
+        logger.warning("Skipping %s route: %s", module_name, exc)
+        return None
+
+
+upload = optional_route("upload")
+inference = optional_route("inference")
+autoencoder = optional_route("autoencoder")
+assistant = optional_route("assistant")
 
 app = FastAPI(title="Computational Lithography AI")
 
 # CORS settings (adjust as per frontend port/domain)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,6 +46,12 @@ if autoencoder:
     app.include_router(autoencoder.router, prefix="/autoencoder", tags=["AutoEncoder"])
 if assistant:
     app.include_router(assistant.router, prefix="/assistant", tags=["Assistant"])
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)
+
 
 # Root route
 @app.get("/")
