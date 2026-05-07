@@ -31,11 +31,12 @@ httpx/, multipart/, pandas/ Minimal stubs used for testing without real dependen
    cd computational_litho_ai
    uvicorn backend.main:app --reload
    ```
-3. Start the frontend development server inside `computational_litho_ai/frontend`:
+3. Start the frontend development server from the `computational_litho_ai` directory:
    ```bash
    npm install
    npm run dev
    ```
+   The root `dev` script installs frontend dependencies and delegates to the Vite app in `computational_litho_ai/frontend`.
 4. Run the tests (requires all optional dependencies):
    ```bash
    pytest
