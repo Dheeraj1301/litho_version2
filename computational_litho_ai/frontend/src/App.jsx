@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import UploadCSV from './components/UploadCSV';
 import InferenceForm from './components/InferenceForm';
 import ImageInference from './components/ImageInference';
 import AutoEncoderInfer from './components/AutoEncoderInfer';

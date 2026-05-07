@@ -3,27 +3,28 @@
 import React, { useState, useEffect } from 'react';
 
 function ChatAssistant() {
-  const [input, setInput] = useState("");
-  const [response, setResponse] = useState("");
-  const [mode, setMode] = useState("tool");
+  const [input, setInput] = useState('');
+  const [response, setResponse] = useState('');
+  const [mode, setMode] = useState('doc');
   const [file, setFile] = useState(null);
-  const [uploadMsg, setUploadMsg] = useState("");
+  const [uploadMsg, setUploadMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // ⬇️ Tensor Analysis
-  const [sessionId, setSessionId] = useState("");
+  const [sessionId, setSessionId] = useState('');
   const [availableSessions, setAvailableSessions] = useState([]);
   const [tensorStats, setTensorStats] = useState(null);
-  const [tensorError, setTensorError] = useState("");
+  const [tensorError, setTensorError] = useState('');
 
   // 🔄 Load available sessions once on mount
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/assistant/sessions");
+        const res = await fetch('http://127.0.0.1:8000/assistant/sessions');
         const data = await res.json();
-        if (data.sessions) setAvailableSessions(data.sessions);
+        if (Array.isArray(data.sessions)) setAvailableSessions(data.sessions);
       } catch (err) {
-        console.error("Failed to fetch sessions:", err);
+        console.error('Failed to fetch sessions:', err);
       }
     };
 
@@ -31,151 +32,184 @@ function ChatAssistant() {
   }, []);
 
   const handleAsk = async () => {
-    if (!input) return;
+    if (!input.trim()) return;
 
-    const endpoint = mode === "tool" ? "tool" : "doc";
+    const endpoint = mode === 'tool' ? 'tool' : 'doc';
+    setLoading(true);
+    setResponse('');
 
-    const res = await fetch(`http://127.0.0.1:8000/assistant/${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: input }),
-    });
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/assistant/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: input }),
+      });
 
-    const data = await res.json();
-    setResponse(data.response);
+      if (!res.ok) {
+        setResponse(`Assistant endpoint returned ${res.status}. Please restart the backend.`);
+        return;
+      }
+
+      const data = await res.json();
+      setResponse(data.response || 'No assistant response was returned.');
+    } catch (err) {
+      setResponse('Unable to contact the assistant API. Please confirm the backend is running.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file) {
+      setUploadMsg('Please choose a PDF first.');
+      return;
+    }
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append('file', file);
 
-    const res = await fetch("http://127.0.0.1:8000/assistant/upload_pdf", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await res.json();
-    setUploadMsg(data.message);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/assistant/upload_pdf', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      setUploadMsg(data.message || data.error || 'Upload complete.');
+    } catch (err) {
+      setUploadMsg('PDF upload failed. Please confirm the backend is running.');
+    }
   };
 
   const handleAnalyzeTensor = async () => {
-    setTensorError("");
+    setTensorError('');
     setTensorStats(null);
     if (!sessionId) {
-      setTensorError("❗ Please select a session.");
+      setTensorError('❗ Please select a session.');
       return;
     }
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/assistant/analyze_tensor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('http://127.0.0.1:8000/assistant/analyze_tensor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId }),
       });
 
       if (!res.ok) {
         const error = await res.json();
-        setTensorError(`❌ ${error.detail}`);
+        setTensorError(`❌ ${error.detail || 'Tensor analysis failed.'}`);
         return;
       }
 
       const data = await res.json();
       setTensorStats(data.analysis);
     } catch (err) {
-      setTensorError("❌ Error contacting the server.");
+      setTensorError('❌ Error contacting the server.');
     }
   };
 
   return (
-    <div className="p-4 border rounded bg-white shadow mt-4 max-w-xl mx-auto">
-      <h2 className="text-xl font-bold mb-4">🤖 AI Assistant</h2>
-
-      {/* Mode Selector */}
-      <div className="mb-4">
-        <label className="text-sm font-medium mr-2">Mode:</label>
-        <select value={mode} onChange={(e) => setMode(e.target.value)} className="border px-2 py-1 rounded">
-          <option value="tool">LangChain Tool</option>
-          <option value="doc">Doc QA</option>
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-800">🤖 Data Assistant</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Ask about uploaded PDFs, sample CSV/TXT data, lithography concepts, or generated tensor sessions.
+          </p>
+        </div>
+        <select
+          value={mode}
+          onChange={(e) => setMode(e.target.value)}
+          className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
+        >
+          <option value="doc">Ask uploaded/sample data</option>
+          <option value="tool">Quick lithography help</option>
         </select>
       </div>
 
-      {/* Question Input */}
-      <input
-        type="text"
-        className="border p-2 rounded w-full mb-3"
-        placeholder="Ask me anything..."
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-      />
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <input
+          type="text"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          placeholder="Example: summarize the sample data or explain yield prediction"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleAsk();
+          }}
+        />
+        <button
+          onClick={handleAsk}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={loading}
+        >
+          {loading ? 'Asking...' : 'Ask'}
+        </button>
+      </div>
 
-      {/* Ask Button */}
-      <button
-        onClick={handleAsk}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4"
-      >
-        Ask
-      </button>
-
-      {/* Assistant Response */}
       {response && (
-        <div className="bg-gray-100 p-3 rounded text-sm border">
+        <div className="mt-4 rounded-lg border bg-slate-50 p-4 text-sm text-slate-700">
           <strong>Response:</strong> {response}
         </div>
       )}
 
-      {/* PDF Upload Section */}
-      <div className="mt-6 border-t pt-4">
-        <h3 className="text-md font-semibold mb-2">📄 Upload PDF to Knowledge Base</h3>
-        <input type="file" accept=".pdf" onChange={(e) => setFile(e.target.files[0])} className="mb-2" />
-        <button
-          onClick={handleUpload}
-          className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-        >
-          Upload
-        </button>
-        {uploadMsg && <p className="text-sm mt-2 text-green-700">{uploadMsg}</p>}
+      <div className="mt-6 grid gap-4 border-t pt-5 lg:grid-cols-2">
+        <div>
+          <h3 className="text-md font-semibold text-slate-800">📄 Add PDF data</h3>
+          <p className="mt-1 text-xs text-slate-500">Uploaded PDFs are saved to the data folder for assistant answers.</p>
+          <input
+            type="file"
+            accept=".pdf"
+            onChange={(e) => setFile(e.target.files[0])}
+            className="mt-3 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-purple-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-purple-700"
+          />
+          <button
+            onClick={handleUpload}
+            className="mt-3 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-700"
+          >
+            Add to assistant
+          </button>
+          {uploadMsg && <p className="mt-2 text-sm text-green-700">{uploadMsg}</p>}
+        </div>
+
+        <div>
+          <h3 className="text-md font-semibold text-slate-800">📊 Analyze tensor session</h3>
+          <p className="mt-1 text-xs text-slate-500">Sessions are created by the AutoEncoder reconstruction workflow.</p>
+          <select
+            value={sessionId}
+            onChange={(e) => setSessionId(e.target.value)}
+            className="mt-3 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
+          >
+            <option value="">-- Select a session --</option>
+            {availableSessions.map((session) => (
+              <option key={session} value={session}>{session}</option>
+            ))}
+          </select>
+
+          <button
+            onClick={handleAnalyzeTensor}
+            className="mt-3 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
+          >
+            Analyze Tensor
+          </button>
+
+          {tensorError && <p className="mt-2 text-sm text-red-600">{tensorError}</p>}
+
+          {tensorStats && (
+            <div className="mt-3 rounded-lg border bg-slate-50 p-3 text-sm">
+              <strong>Analysis:</strong>
+              <ul className="list-inside list-disc">
+                <li><b>Shape:</b> {String(tensorStats.shape)}</li>
+                <li><b>Mean:</b> {tensorStats.mean.toFixed(4)}</li>
+                <li><b>Std Dev:</b> {tensorStats.std.toFixed(4)}</li>
+                <li><b>Min:</b> {tensorStats.min.toFixed(4)}</li>
+                <li><b>Max:</b> {tensorStats.max.toFixed(4)}</li>
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Tensor Session Analysis */}
-      <div className="mt-6 border-t pt-4">
-        <h3 className="text-md font-semibold mb-2">📊 Analyze Tensor from Session</h3>
-
-        <select
-          value={sessionId}
-          onChange={(e) => setSessionId(e.target.value)}
-          className="border p-2 rounded w-full mb-2"
-        >
-          <option value="">-- Select a session --</option>
-          {availableSessions.map((session) => (
-            <option key={session} value={session}>{session}</option>
-          ))}
-        </select>
-
-        <button
-          onClick={handleAnalyzeTensor}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-        >
-          Analyze Tensor
-        </button>
-
-        {tensorError && <p className="text-sm text-red-600 mt-2">{tensorError}</p>}
-
-        {tensorStats && (
-          <div className="bg-gray-50 p-3 mt-3 rounded text-sm border">
-            <strong>Analysis:</strong>
-            <ul className="list-disc list-inside">
-              <li><b>Shape:</b> {tensorStats.shape}</li>
-              <li><b>Mean:</b> {tensorStats.mean.toFixed(4)}</li>
-              <li><b>Std Dev:</b> {tensorStats.std.toFixed(4)}</li>
-              <li><b>Min:</b> {tensorStats.min.toFixed(4)}</li>
-              <li><b>Max:</b> {tensorStats.max.toFixed(4)}</li>
-            </ul>
-          </div>
-        )}
-      </div>
-    </div>
+    </section>
   );
 }
 
