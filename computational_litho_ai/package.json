@@ -2,9 +2,9 @@
   "name": "computational_litho_ai",
   "private": true,
   "scripts": {
-    "predev": "npm --prefix frontend ci --no-audit --fund=false",
+    "predev": "npm --prefix frontend install",
     "dev": "npm --prefix frontend run dev",
-    "prebuild": "npm --prefix frontend ci --no-audit --fund=false",
+    "prebuild": "npm --prefix frontend install",
     "build": "npm --prefix frontend run build",
     "preview": "npm --prefix frontend run preview"
   },
