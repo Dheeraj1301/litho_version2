@@ -1,17 +1,13 @@
 # backend/routes/assistant.py
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from pydantic import BaseModel
-import os
-import numpy as np
+import csv
 import logging
+import os
+from pathlib import Path
 
-from langchain.chains import RetrievalQA
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import CharacterTextSplitter
-from langchain_huggingface import HuggingFaceEndpoint
+import numpy as np
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -24,80 +20,139 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+
 class Query(BaseModel):
     query: str
+
 
 class TensorRequest(BaseModel):
     session_id: str
 
-# ✅ Embedding model and text splitter
-embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
 
-# ✅ In-memory vector store and retriever
-VECTOR_DB_PATH = "./data/vector_store"
-if not os.path.exists(VECTOR_DB_PATH):
-    os.makedirs(VECTOR_DB_PATH)
+DATA_DIRECTORIES = [Path("data/raw"), Path("data/processed")]
+SUPPORTED_TEXT_SUFFIXES = {".txt", ".csv", ".md", ".json", ".yaml", ".yml"}
+knowledge_cache = []
 
-vectorstore = None  # Will hold the FAISS store
-retriever = None
 
-# ✅ Load PDF and create vectorstore
-def load_vector_store_from_pdf(file_path: str):
-    loader = PyPDFLoader(file_path)
-    docs = loader.load_and_split()
-    split_docs = text_splitter.split_documents(docs)
-    return FAISS.from_documents(split_docs, embedding)
+def read_text_file(path: Path) -> str:
+    if path.suffix.lower() == ".csv":
+        with path.open(newline="", encoding="utf-8", errors="ignore") as csv_file:
+            reader = csv.reader(csv_file)
+            rows = [", ".join(row) for _, row in zip(range(25), reader)]
+        return "\n".join(rows)
 
-# ✅ Ask from PDF
+    return path.read_text(encoding="utf-8", errors="ignore")[:8000]
+
+
+def extract_pdf_text(path: Path) -> str:
+    """Best-effort PDF extraction without requiring LangChain at import time."""
+    try:
+        from langchain_community.document_loaders import PyPDFLoader
+
+        loader = PyPDFLoader(str(path))
+        pages = loader.load_and_split()
+        return "\n".join(page.page_content for page in pages)[:12000]
+    except Exception as exc:  # pragma: no cover - depends on optional PDF stack
+        logger.warning("PDF text extraction failed for %s: %s", path, exc)
+        return f"PDF uploaded: {path.name}. Text extraction is unavailable in this environment."
+
+
+def load_document(path: Path):
+    suffix = path.suffix.lower()
+    if suffix in SUPPORTED_TEXT_SUFFIXES:
+        content = read_text_file(path)
+    elif suffix == ".pdf":
+        content = extract_pdf_text(path)
+    else:
+        return None
+
+    return {"source": path.name, "path": str(path), "content": content}
+
+
+def refresh_knowledge_cache():
+    global knowledge_cache
+    documents = []
+    for directory in DATA_DIRECTORIES:
+        if not directory.exists():
+            continue
+        for path in sorted(directory.iterdir()):
+            if path.is_file():
+                document = load_document(path)
+                if document and document["content"].strip():
+                    documents.append(document)
+    knowledge_cache = documents
+    return documents
+
+
+def score_document(query: str, document: dict) -> int:
+    words = [word for word in query.lower().split() if len(word) > 2]
+    content = document["content"].lower()
+    return sum(content.count(word) for word in words)
+
+
+def answer_from_documents(query: str) -> str:
+    documents = refresh_knowledge_cache()
+    if not documents:
+        return "No uploaded or sample data is available yet. Upload a PDF or add CSV/TXT data first."
+
+    ranked = sorted(
+        documents,
+        key=lambda document: score_document(query, document),
+        reverse=True,
+    )
+    best = ranked[0]
+    content = best["content"].strip()
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    query_words = [word for word in query.lower().split() if len(word) > 2]
+    matching_lines = [
+        line for line in lines if any(word in line.lower() for word in query_words)
+    ]
+    selected_lines = matching_lines[:4] or lines[:4]
+    snippet = " ".join(selected_lines)[:900]
+    return f"Based on {best['source']}: {snippet}"
+
+
 @router.post("/doc")
 async def ask_from_doc(query: Query):
-    global vectorstore, retriever
-    if not vectorstore:
-        return {"response": "Please upload a PDF first."}
-    
-    llm = HuggingFaceEndpoint(
-        repo_id="google/flan-t5-base",
-        task="text2text-generation",
-        temperature=0.7
-    )
-    
-    qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
-    response = qa.run(query.query)
+    response = answer_from_documents(query.query)
     logger.info("DOC_QUERY: %s | RESPONSE: %s", query.query, response)
     return {"response": response}
 
-# ✅ Upload and process PDF
+
 @router.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...)):
-    global vectorstore, retriever
+    processed_dir = Path("data/processed")
+    processed_dir.mkdir(parents=True, exist_ok=True)
+    file_path = processed_dir / file.filename
 
-    file_path = f"./data/processed/{file.filename}"
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with file_path.open("wb") as buffer:
+        buffer.write(await file.read())
 
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
-
-    vectorstore = load_vector_store_from_pdf(file_path)
-    retriever = vectorstore.as_retriever()
+    refresh_knowledge_cache()
     logger.info("PDF_UPLOADED: %s", file.filename)
-    return {"message": f"Uploaded and processed {file.filename} successfully."}
+    return {"message": f"Uploaded {file.filename} and added it to the assistant knowledge base."}
 
-# ✅ Tool-based simple QA
+
 @router.post("/tool")
 async def ask_tool(query: Query):
+    normalized_query = query.query.lower()
     tools_qa = {
-        "lithography": "Lithography is a process used in semiconductor manufacturing.",
-        "optimization": "Optimization in lithography involves improving print quality and yield."
+        "lithography": "Lithography is a semiconductor manufacturing process that transfers circuit patterns onto a wafer.",
+        "optimization": "Lithography optimization improves print quality, process windows, and predicted yield.",
+        "yield": "Yield prediction estimates how many manufactured patterns or wafers are expected to pass quality targets.",
+        "autoencoder": "The autoencoder reconstructs image inputs and stores tensor sessions that can be analyzed later.",
+        "csv": "Use the CSV inference section to upload process data and receive predicted yield values.",
     }
     for keyword, answer in tools_qa.items():
-        if keyword in query.query.lower():
+        if keyword in normalized_query:
             logger.info("TOOL_QUERY: %s | RESPONSE: %s", query.query, answer)
             return {"response": answer}
-    logger.info("TOOL_QUERY: %s | RESPONSE: %s", query.query, "no answer")
-    return {"response": "Sorry, I don’t have an answer using tools right now."}
 
-# ✅ Analyze tensor.txt from a session
+    response = answer_from_documents(query.query)
+    logger.info("TOOL_QUERY: %s | RESPONSE: %s", query.query, response)
+    return {"response": response}
+
+
 @router.post("/analyze_tensor")
 async def analyze_tensor(request: TensorRequest):
     session_id = request.session_id
@@ -107,7 +162,7 @@ async def analyze_tensor(request: TensorRequest):
         raise HTTPException(status_code=404, detail=f"tensor.txt not found in {session_id}.")
 
     try:
-        with open(tensor_path, "r") as f:
+        with open(tensor_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
             values = []
             for line in lines:
@@ -128,13 +183,16 @@ async def analyze_tensor(request: TensorRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading tensor.txt: {str(e)}")
 
-# ✅ List available session folders under .ml/logs/
+
 @router.get("/sessions")
 async def list_sessions():
     logs_path = os.path.join("ml", "logs")
     try:
-        sessions = [name for name in os.listdir(logs_path)
-                    if os.path.isdir(os.path.join(logs_path, name))]
+        sessions = [
+            name
+            for name in os.listdir(logs_path)
+            if os.path.isdir(os.path.join(logs_path, name))
+        ]
         return {"sessions": sessions}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "sessions": []}
