@@ -36,7 +36,7 @@ httpx/, multipart/, pandas/ Minimal stubs used for testing without real dependen
    npm install
    npm run dev
    ```
-   The root `dev` script performs a clean frontend install with `npm ci` before delegating to the Vite app in `computational_litho_ai/frontend`, which helps repair incomplete `node_modules` folders.
+   The root `dev` script installs frontend dependencies and delegates to the Vite app in `computational_litho_ai/frontend`.
 4. Run the tests (requires all optional dependencies):
    ```bash
    pytest
