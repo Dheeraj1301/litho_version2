@@ -3,35 +3,28 @@ import InferenceForm from './components/InferenceForm';
 import ImageInference from './components/ImageInference';
 import AutoEncoderInfer from './components/AutoEncoderInfer';
 import ChatAssistant from './components/ChatAssistant';
-import SectionErrorBoundary from './components/SectionErrorBoundary';
 
 const features = [
   {
-    title: 'CSV Yield Inference',
-    description: 'Upload one CSV once, run prediction, inspect tabular output, and export results.',
+    title: 'CSV Pipeline',
+    description: 'Upload process data and validate the backend connection before advanced inference.',
   },
   {
     title: 'Model Inference',
     description: 'Run prediction and visualize tabular outputs with quick export support.',
   },
   {
-    title: 'Image Workflows',
-    description: 'Classify layouts and run AutoEncoder reconstruction in separate focused panels.',
+    title: 'Image + AutoEncoder',
+    description: 'Classify, reconstruct, and inspect image-based responses from trained models.',
   },
   {
-    title: 'Data Assistant',
-    description: 'Ask questions over uploaded/sample data and analyze generated tensor sessions.',
+    title: 'AI Assistant',
+    description: 'Use tool mode, doc QA, PDF ingestion, and tensor-session analysis in one place.',
   },
 ];
 
 function App() {
   const [serverStatus, setServerStatus] = useState('⏳ Checking server...');
-
-  useEffect(() => {
-    document.body.classList.add('app-mounted');
-
-    return () => document.body.classList.remove('app-mounted');
-  }, []);
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/health/ping')
@@ -59,8 +52,8 @@ function App() {
             🧠 Computational Lithography AI
           </h1>
           <p className="mt-3 max-w-3xl text-sm text-slate-600 sm:text-base">
-            A unified workspace for production inference, image reconstruction workflows,
-            and assistant-powered analysis over your uploaded data.
+            A unified workspace for dataset upload, production inference, image reconstruction workflows,
+            and assistant-powered analysis.
           </p>
           <p className="mt-4 text-sm font-medium text-slate-700">{serverStatus}</p>
         </header>
@@ -78,18 +71,11 @@ function App() {
         </section>
 
         <main className="mt-8 space-y-6">
-          <SectionErrorBoundary title="CSV Inference">
-            <InferenceForm />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary title="Image Classification">
-            <ImageInference />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary title="AutoEncoder">
-            <AutoEncoderInfer />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary title="Data Assistant">
-            <ChatAssistant />
-          </SectionErrorBoundary>
+          <UploadCSV />
+          <InferenceForm />
+          <ImageInference />
+          <AutoEncoderInfer />
+          <ChatAssistant />
         </main>
       </div>
     </div>
